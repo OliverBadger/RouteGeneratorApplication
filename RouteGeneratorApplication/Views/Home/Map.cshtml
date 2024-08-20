@@ -1,0 +1,37 @@
+﻿@page
+@model MapModel
+@{
+    // Layout = null; // Use this if you dont want a layout page
+    // var apiKey = "Google API Key";
+    string apiKey = ConfigSaves.GoogleMapsSecret;
+}
+<!DOCTYPE html>
+<html>
+	<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Map</title>
+    <style>
+        /* Set the size of the div element that will contain the map */
+        #map {
+            height: 500px; /* Adjust height as needed */
+            width: 100%; /* Full width */
+        }
+    </style>
+    <script>
+        // Initialize the map when the page loads
+        function initMap() {
+            var mapOptions = {
+                center: { lat: -34.397, lng: 150.644 }, // Default center position
+                zoom: 8 // Default zoom level
+            };
+            var map = new google.maps.Map(document.getElementById('map'), mapOptions);
+        }
+    </script>
+</head>
+<body>
+    <h3>My Google Map</h3>
+    <div id="map"></div>
+    <!-- Load the Google Maps JavaScript API -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=@apiKey&callback=initMap"></script>
+</body>
+</html>
