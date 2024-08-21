@@ -17,6 +17,11 @@ html {
   min-height: 100%;
 }
 
+#main-container-body {
+    width: 100%;
+    height: 100%;
+}
+
 body {
   margin-bottom: 60px;
 }
