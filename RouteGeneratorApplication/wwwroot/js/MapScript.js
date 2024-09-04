@@ -1,45 +1,63 @@
 ﻿let map;
 const markers = [];
+let startLocation = null;
 
-// Initialize the map when the page loads
+// Initialize the map
 function initMap() {
-    // Initialize the map centered at a starting point
     map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 6,
+        zoom: 15,
         center: { lat: 37.7749, lng: -122.4194 }  // Example: San Francisco
     });
 
-    // Define the start and end points
-    const start = { lat: 34.0522, lng: -118.2437 }; // Example: Los Angeles
-    const end = { lat: 36.1699, lng: -115.1398 };   // Example: Las Vegas
+    map.addListener('click', function (event) {
+        handleMapClick(event.latLng);
+    });
+}
 
-    // Define waypoints
-    const waypts = [
-        {
-            location: { lat: 35.2828, lng: -120.6596 }, // Example: San Luis Obispo
-            stopover: true
-        },
-        {
-            location: { lat: 34.9530, lng: -120.4357 }, // Example: Santa Maria
-            stopover: true
-        }
-    ];
+function handleMapClick(location) {
+    if (startLocation === null) {
+        // Set the starting location on the first click
+        startLocation = location;
+        addMarker(location, 'Start');
+    } else {
+        // Add waypoints on subsequent clicks
+        addMarker(location, 'Waypoint');
+    }
+}
 
-    // Create a DirectionsService and DirectionsRenderer
+function addMarker(location, label) {
+    const marker = new google.maps.Marker({
+        position: location,
+        map: map,
+        label: label
+    });
+    markers.push(marker);
+}
+
+function drawRoute() {
+    if (!startLocation || markers.length < 2) {
+        alert('Please set the start location and at least one waypoint.');
+        return;
+    }
+
+    // Add the starting point as the final destination to close the loop
+    const waypts = markers.slice(1).map(marker => ({
+        location: marker.getPosition(),
+        stopover: true
+    }));
+
     const directionsService = new google.maps.DirectionsService();
     const directionsRenderer = new google.maps.DirectionsRenderer();
     directionsRenderer.setMap(map);
 
-    // Set up the request for directions
     const request = {
-        origin: start,
-        destination: end,
+        origin: startLocation,
+        destination: startLocation, // End at the starting point
         waypoints: waypts,
         optimizeWaypoints: true,
         travelMode: google.maps.TravelMode.DRIVING
     };
 
-    // Request directions and display the route
     directionsService.route(request, function (result, status) {
         if (status === google.maps.DirectionsStatus.OK) {
             directionsRenderer.setDirections(result);
@@ -47,53 +65,13 @@ function initMap() {
             console.error('Directions request failed due to ' + status);
         }
     });
-
-    // Add click event listener to the map
-    map.addListener('click', function (event) {
-        addMarker(event.latLng);
-    });
 }
 
-// Add a marker at a given location
-function addMarker(location) {
-    const marker = new google.maps.Marker({
-        position: location,
-        map: map
-    });
-    markers.push(marker);
-}
-
-// Get waypoints from markers
-function getWaypoints() {
-    return markers.map(marker => ({
-        lat: marker.getPosition().lat(),
-        lng: marker.getPosition().lng()
-    }));
-}
-
-// Send waypoints to the server
-function sendWaypoints() {
-    fetch('/Route/GenerateRoute', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(getWaypoints())
-    })
-        .then(response => response.json())
-        .then(route => {
-            drawRoute(route);
-        });
-}
-
-// Draw route on the map
-function drawRoute(route) {
-    const path = route.map(point => ({ lat: point.lat, lng: point.lng }));
-    new google.maps.Polyline({
-        path: path,
-        geodesic: true,
-        strokeColor: '#FF0000',
-        strokeOpacity: 1.0,
-        strokeWeight: 2
-    }).setMap(map);
+function resetMap() {
+    // Clear all markers and routes
+    markers.forEach(marker => marker.setMap(null));
+    markers.length = 0; // Clear the markers array
+    startLocation = null; // Reset the start location
+    map.setCenter({ lat: 37.7749, lng: -122.4194 });  // Reset to default center
+    map.setZoom(6);  // Reset zoom level
 }
