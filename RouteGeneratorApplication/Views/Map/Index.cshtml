@@ -1,0 +1,92 @@
+﻿@page
+@model RouteGeneratorApplication.Models.MapModel
+@{
+    // Layout = null; // Use this if you dont want a layout page
+    // var apiKey = "Google API Key";
+    // ViewData["Title"] = "Map";
+    string apiKey = ConfigSaves.GoogleMapsSecret;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Map</title>
+    <script src="/js/MapScript.js?v=1.0"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body onload="initMap()">
+    <div id="map" style="height: 500px; width: 100%;"></div>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=@apiKey&callback=initMap"></script>
+
+    <h2>Enter your name and submit:</h2>
+
+    <form action="@Url.Action("Post", "Map")" method="post">
+        <label for="nameInput">Enter your name:</label>
+        <input type="text" id="nameInput" name="name" />
+
+        <input type="submit" value="Form Post" />
+    </form>
+
+    @* For AJAX method *@
+    <label for="nameInput">Enter your name:</label>
+    <input type="text" id="nameInput" />
+
+    <input type="button" value="Ajax Method" onclick="postToServer()" />
+
+    <script>
+        function postToServer() {
+            const name = document.getElementById('nameInput').value;
+
+            const data = {
+                name: name
+            };
+
+            fetch('@Url.Action("PostAjax", "Map")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)  // Convert data to JSON string
+            })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = '@Url.Action("Index", "Map")';
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    </script>
+
+    
+    
+    
+    
+    @* <input type="button"
+           value="Go Somewhere Else"
+           onclick="location.href='@Url.Action("Post", "Map")'" />
+           
+    <button id="hideButton">Hide</button>
+    <p id="myParagraph">Hello, this is a paragraph!</p>
+
+    <script>
+        $(document).ready(function () {
+            $("#hideButton").click(function () {
+                $("#myParagraph").hide();
+            });
+        });
+    </script> *@
+
+
+    @* <ul class="navbar-nav flex-grow-1"> *@
+    @*     <li class="nav-item"> *@
+    @*         <a class="nav-link text-dark" asp-area="" asp-controller="Map" onclick="Post">Post</a> *@
+    @*     </li> *@
+    @*     <li class="nav-item"> *@
+    @*         <a class="nav-link text-dark" asp-area="" asp-controller="Map" asp-action="Privacy">Privacy</a> *@
+    @*     </li> *@
+    @*     <li class="nav-item"> *@
+    @*         <a class="nav-link text-dark" asp-area="" asp-controller="Map" asp-action="Map">Map</a> *@
+    @*     </li> *@
+    </ul>
+</body>
+</html>

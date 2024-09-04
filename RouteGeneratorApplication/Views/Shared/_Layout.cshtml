@@ -1,4 +1,8 @@
-﻿<!DOCTYPE html>
+﻿@{
+    var isMapPage = ViewContext.RouteData.Values["action"] as string == "Map";
+}
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -26,7 +30,7 @@
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Map">Map</a>
+                            <a class="nav-link text-dark" href="@Url.Action("Index", "Map")">Map</a>
                         </li>
                     </ul>
                     <partial name="_LoginPartial" />
@@ -35,7 +39,7 @@
         </nav>
     </header>
 @*     <div class="container"> *@
-    <div class="main-container-body">
+    <div class="@(isMapPage ? "main-container-body" : "container")">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
