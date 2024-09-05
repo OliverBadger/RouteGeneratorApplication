@@ -1,95 +1,71 @@
 ﻿@page
 @model RouteGeneratorApplication.Models.MapModel
 @{
-    // Layout = null; // Use this if you dont want a layout page
-    // var apiKey = "Google API Key";
-    // ViewData["Title"] = "Map";
+    // ViewData["Title"] = "Map Route Generator";
+    var distanceInKm = ViewBag.DistanceInKm ?? 0;
+    var waypoints = ViewBag.Waypoints ?? new List<Location>();
     string apiKey = ConfigSaves.GoogleMapsSecret;
 }
+
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Map</title>
-    <script src="/js/MapScript.js?v=1.0"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-</head>
-<body onload="initMap()">
-    <div id="map" style="height: 500px; width: 100%;"></div>
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=@apiKey&callback=initMap"></script>
-
-    <input type="number" id="distanceInput" placeholder="Enter distance in km" />
-    <button onclick="generateRandomRoute(parseFloat(document.getElementById('distanceInput').value))">Generate Random Circular Route</button>
-
-    <h2>Enter your name and submit:</h2>
-
-    <form action="@Url.Action("Post", "Map")" method="post">
-        <label for="nameInput">Enter your name:</label>
-        <input type="text" id="nameInput" name="name" />
-
-        <input type="submit" value="Form Post" />
-    </form>
-
-    @* For AJAX method *@
-    <label for="nameInput">Enter your name:</label>
-    <input type="text" id="nameInput" />
-
-    <input type="button" value="Ajax Method" onclick="postToServer()" />
-
+    <title>Generate Circular Route</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=@apiKey&callback=initMap"></script>
     <script>
-        function postToServer() {
-            const name = document.getElementById('nameInput').value;
+        let map;
 
-            const data = {
-                name: name
-            };
+        function initMap() {
+            // Default start location (San Francisco)
+            const startLocation = { lat: 37.7749, lng: -122.4194 };
 
-            fetch('@Url.Action("PostAjax", "Map")', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)  // Convert data to JSON string
-            })
-                .then(response => {
-                    if (response.ok) {
-                        window.location.href = '@Url.Action("Index", "Map")';
-                    }
-                })
-                .catch(error => console.error('Error:', error));
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 14,
+                center: startLocation,
+            });
+
+            // Waypoints from the backend
+            const waypoints = [
+        @foreach (var wp in waypoints)
+        {
+            @:{ lat: @wp.Latitude, lng: @wp.Longitude }, // Proper Razor syntax in JavaScript
+        }
+                    ];
+
+            if (waypoints.length > 0) {
+                const routePath = new google.maps.Polyline({
+                    path: waypoints,
+                    geodesic: true,
+                    strokeColor: '#FF0000',
+                    strokeOpacity: 1.0,
+                    strokeWeight: 2,
+                });
+
+                routePath.setMap(map);
+
+                // Add markers for each waypoint
+                waypoints.forEach((point) => {
+                    new google.maps.Marker({
+                        position: point,
+                        map: map,
+                        title: 'Waypoint',
+                    });
+                });
+            }
         }
     </script>
+</head>
+<body onload="initMap()">
+    <h1>Generate Circular Route</h1>
 
-    
-    
-    
-    
-    @* <input type="button"
-           value="Go Somewhere Else"
-           onclick="location.href='@Url.Action("Post", "Map")'" />
-           
-    <button id="hideButton">Hide</button>
-    <p id="myParagraph">Hello, this is a paragraph!</p>
+    <!-- Distance Input Form -->
+    <form method="post" asp-action="GenerateRandomRoute">
+        <label for="distanceInput">Enter distance (in km):</label>
+        <input type="number" id="distanceInput" name="distanceInKm" placeholder="5, 10, 20" required min="1" step="1" />
+        <button type="submit">Generate Route</button>
+    </form>
 
-    <script>
-        $(document).ready(function () {
-            $("#hideButton").click(function () {
-                $("#myParagraph").hide();
-            });
-        });
-    </script> *@
-
-
-    @* <ul class="navbar-nav flex-grow-1"> *@
-    @*     <li class="nav-item"> *@
-    @*         <a class="nav-link text-dark" asp-area="" asp-controller="Map" onclick="Post">Post</a> *@
-    @*     </li> *@
-    @*     <li class="nav-item"> *@
-    @*         <a class="nav-link text-dark" asp-area="" asp-controller="Map" asp-action="Privacy">Privacy</a> *@
-    @*     </li> *@
-    @*     <li class="nav-item"> *@
-    @*         <a class="nav-link text-dark" asp-area="" asp-controller="Map" asp-action="Map">Map</a> *@
-    @*     </li> *@
-    </ul>
+    <!-- Map display -->
+    <div id="map" style="height: 500px; width: 100%;"></div>
 </body>
 </html>

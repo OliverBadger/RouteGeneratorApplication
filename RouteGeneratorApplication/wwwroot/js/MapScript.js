@@ -1,6 +1,5 @@
 ﻿let map;
-let startLocation = { lat: 37.7749, lng: -122.4194 }; // Example: San Francisco
-const RADIUS_EARTH = 6371000; // Radius of Earth in meters
+let startLocation = { lat: 37.7749, lng: -122.4194 }; // San Francisco as an example
 
 function initMap() {
     map = new google.maps.Map(document.getElementById('map'), {
@@ -8,76 +7,47 @@ function initMap() {
         center: startLocation,
     });
 
-    const marker = new google.maps.Marker({
+    // Add a marker for the start location
+    new google.maps.Marker({
         position: startLocation,
         map: map,
         label: 'Start'
     });
 }
 
-function generateRandomRoute(distanceInKm) {
-    const waypoints = generateCircularWaypoints(startLocation, distanceInKm);
+// Function to generate the route by calling the C# method via AJAX
+function generateRoute() {
+    const distanceInKm = 10; // Example distance
 
-    const directionsService = new google.maps.DirectionsService();
-    const directionsRenderer = new google.maps.DirectionsRenderer();
-    directionsRenderer.setMap(map);
-
-    const request = {
-        origin: startLocation,
-        destination: startLocation, // End at the start point to complete the circle
-        waypoints: waypoints.map(waypoint => ({
-            location: waypoint,
-            stopover: true
-        })),
-        optimizeWaypoints: false,
-        travelMode: google.maps.TravelMode.DRIVING
-    };
-
-    directionsService.route(request, function (result, status) {
-        if (status === google.maps.DirectionsStatus.OK) {
-            directionsRenderer.setDirections(result);
-        } else {
-            console.error('Directions request failed due to ' + status);
-        }
+    // AJAX call to fetch waypoints from the server
+    $.post('/Map/GenerateRandomRoute', { lat: startLocation.lat, lng: startLocation.lng, distanceInKm: distanceInKm }, function (waypoints) {
+        drawRoute(waypoints);
     });
 }
 
-function generateCircularWaypoints(center, distanceInKm) {
-    const waypoints = [];
-    const numPoints = 8; // Number of points to generate for the circle (8 points for an octagon)
-    const radius = (distanceInKm * 1000) / 2 / Math.PI; // Convert distance to meters and calculate radius
+// Function to draw the circular route on the map
+function drawRoute(waypoints) {
+    const path = waypoints.map(function (wp) {
+        return { lat: wp.Latitude, lng: wp.Longitude };
+    });
 
-    for (let i = 0; i < numPoints; i++) {
-        const angle = (i * 360) / numPoints; // Divide circle into equal parts
-        const waypoint = calculateWaypoint(center, radius, angle);
-        waypoints.push(waypoint);
-    }
+    // Draw the polyline for the route
+    const routePath = new google.maps.Polyline({
+        path: path,
+        geodesic: true,
+        strokeColor: '#FF0000',
+        strokeOpacity: 1.0,
+        strokeWeight: 2
+    });
 
-    return waypoints;
-}
+    routePath.setMap(map);
 
-function calculateWaypoint(center, radius, angle) {
-    const latRadians = degreesToRadians(center.lat);
-    const lngRadians = degreesToRadians(center.lng);
-
-    const bearing = degreesToRadians(angle);
-
-    const lat = Math.asin(Math.sin(latRadians) * Math.cos(radius / RADIUS_EARTH) +
-        Math.cos(latRadians) * Math.sin(radius / RADIUS_EARTH) * Math.cos(bearing));
-
-    const lng = lngRadians + Math.atan2(Math.sin(bearing) * Math.sin(radius / RADIUS_EARTH) * Math.cos(latRadians),
-        Math.cos(radius / RADIUS_EARTH) - Math.sin(latRadians) * Math.sin(lat));
-
-    return {
-        lat: radiansToDegrees(lat),
-        lng: radiansToDegrees(lng)
-    };
-}
-
-function degreesToRadians(degrees) {
-    return degrees * (Math.PI / 180);
-}
-
-function radiansToDegrees(radians) {
-    return radians * (180 / Math.PI);
+    // Optionally, add markers for each waypoint
+    path.forEach(function (point) {
+        new google.maps.Marker({
+            position: point,
+            map: map,
+            title: 'Waypoint'
+        });
+    });
 }
