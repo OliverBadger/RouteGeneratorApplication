@@ -39,9 +39,9 @@ function generateRandomRoute(distanceInKm) {
 
     // Define the request object for the directions
     const request = {
-        origin: startLocation, // Start location
-        destination: startLocation, // End location (same as start to form a loop)
-        waypoints: waypoints.map(waypoint => ({
+        origin: waypoints[0], // Start location
+        destination: waypoints[0], // End location (same as start to form a loop)
+        waypoints: waypoints.slice(1).map(waypoint => ({
             location: waypoint, // Each waypoint location
             stopover: true // Set stopover to true to include this waypoint in the route
         })),
