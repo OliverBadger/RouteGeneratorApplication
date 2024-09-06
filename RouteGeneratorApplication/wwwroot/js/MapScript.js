@@ -1,6 +1,6 @@
 ﻿let map; // Google Maps object
 
-let startLocation = { lat: 37.7749, lng: -122.4194 }; // Initial map center (San Francisco)
+let startLocation = { lat: 53.428900, lng: -1.324000 }; // Initial map center (example: San Francisco)
 
 const RADIUS_EARTH = 6371000; // Earth radius in meters
 
@@ -17,14 +17,12 @@ function initMap() {
     });
 }
 
-// Generates a circular route based on a diameter
-function generateRandomRoute(diameterInKm) {
-    const radius = (diameterInKm * 1000) / 2;
-    const startAngle = Math.random() * 360;
-    let newStartLocation = calculateWaypoint(startLocation, radius, startAngle);
-    startLocation = newStartLocation;
+// Generates a circular route based on the circumference in kilometers
+function generateRandomRoute(circumferenceInKm) {
+    // Convert the circumference to radius using the formula radius = circumference / (2 * π)
+    const radius = (circumferenceInKm * 1000) / (2 * Math.PI);
 
-    const waypoints = generateCircularWaypoints(startLocation, diameterInKm);
+    const waypoints = generateCircularWaypoints(startLocation, radius);
 
     const directionsService = new google.maps.DirectionsService();
     const directionsRenderer = new google.maps.DirectionsRenderer();
@@ -38,7 +36,7 @@ function generateRandomRoute(diameterInKm) {
             stopover: true
         })),
         optimizeWaypoints: false,
-        travelMode: google.maps.TravelMode.DRIVING
+        travelMode: google.maps.TravelMode.WALKING
     };
 
     directionsService.route(request, function (result, status) {
@@ -51,17 +49,21 @@ function generateRandomRoute(diameterInKm) {
 }
 
 // Generates waypoints in a circular pattern
-function generateCircularWaypoints(center, diameterInKm) {
+function generateCircularWaypoints(center, radius) {
     const waypoints = [];
-    const radius = (diameterInKm * 1000) / 2;
-    const numPoints = 8;
-    const startAngle = Math.random() * 360;
-    const startPoint = calculateWaypoint(center, radius, startAngle);
+    const numPoints = 8; // Number of waypoints (8 for an octagon)
+    const generatedMaps = 3;
 
-    for (let i = 0; i < numPoints; i++) {
-        const angle = (i * 360) / numPoints;
-        const waypoint = calculateWaypoint(startPoint, radius, angle);
-        waypoints.push(waypoint);
+
+    for (let x = 0; x < generatedMaps; x++) {
+        //const startAngle = Math.random() * 360; // Random start angle
+        let startAngle = (x * 360) / numPoints;
+        let startPoint = calculateWaypoint(center, radius, startAngle);
+        for (let i = 0; i < numPoints; i++) {
+            const angle = (i * 360) / numPoints;
+            const waypoint = calculateWaypoint(startPoint, radius, angle);
+            waypoints.push(waypoint);
+        }
     }
 
     return waypoints;
