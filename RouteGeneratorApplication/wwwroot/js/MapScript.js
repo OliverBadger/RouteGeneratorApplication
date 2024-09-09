@@ -90,8 +90,6 @@ function generateCircularWaypoints(center, radius) {
     let startingAngle = Math.floor(Math.random() * 360) + 1;
 
     center = calculateWaypoint(center, radius, startingAngle);
-    if (startingAngle >= 180) { startingAngle -= 180; }
-    else { startingAngle += 180; }
 
     for (let i = 0; i < numPoints; i++) {
         let waypoint;
@@ -101,8 +99,10 @@ function generateCircularWaypoints(center, radius) {
         if (i == 0) {
             waypoint = calculateWaypoint(center, radius, startingAngle);
         } else {
-            const angle = (i * 360) / numPoints; // Divide the circle into equal parts
-            waypoint = calculateWaypoint(center, radius, angle);
+            const incriment = (i * 360) / numPoints; // Divide the circle into equal parts
+            if (startingAngle > 360) { startingAngle -= (360 + incriment); }
+            else { startingAngle += incriment }
+            waypoint = calculateWaypoint(center, radius, startingAngle);
 
             // Find the closest hotspot to the current waypoint
             let closestHotspot = findClosestHotspot(waypoint);
