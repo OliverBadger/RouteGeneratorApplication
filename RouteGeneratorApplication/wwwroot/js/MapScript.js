@@ -2,6 +2,8 @@
 let startLocation = { lat: 53.428900, lng: -1.324000 }; // Initial map center
 const RADIUS_EARTH = 6371000; // Earth radius in meters
 let hotspots = []; // Array to store hotspot locations
+let markers = []; // Array to store all markers
+let directionsRenderer; // Global variable to store the DirectionsRenderer
 
 function initMap() {
     // Initialize Google Maps
@@ -22,10 +24,16 @@ function initMap() {
         content: markerContent
     });
 
+    markers.push(marker); // Track the marker
+
     // Allow users to add hotspots by clicking on the map
     map.addListener('click', function (e) {
         addHotspot(e.latLng);
     });
+
+    // Initialize the DirectionsRenderer
+    directionsRenderer = new google.maps.DirectionsRenderer();
+    directionsRenderer.setMap(map);
 }
 
 // Add a hotspot when the user clicks on the map
@@ -35,12 +43,15 @@ function addHotspot(location) {
     const markerContent = document.createElement('div');
     markerContent.textContent = 'Hotspot';
     markerContent.style.fontSize = '14px';
+    markerContent.style.color = 'red'; // Set hotspot markers to red
 
-    new google.maps.marker.AdvancedMarkerElement({
+    const marker = new google.maps.marker.AdvancedMarkerElement({
         position: location,
         map: map,
         content: markerContent
     });
+
+    markers.push(marker); // Track the marker
 }
 
 // Generates a circular route and adjusts based on nearby hotspots
@@ -49,8 +60,6 @@ function generateRandomRoute(circumferenceInKm) {
     const waypoints = generateCircularWaypoints(startLocation, radius);
 
     const directionsService = new google.maps.DirectionsService();
-    const directionsRenderer = new google.maps.DirectionsRenderer();
-    directionsRenderer.setMap(map);
 
     const request = {
         origin: waypoints[0],
@@ -86,11 +95,12 @@ function generateCircularWaypoints(center, radius) {
 
     for (let i = 0; i < numPoints; i++) {
         let waypoint;
+        let markerContent = document.createElement('div');
+        markerContent.style.fontSize = '14px';
+
         if (i == 0) {
-            startingAngle;
             waypoint = calculateWaypoint(center, radius, startingAngle);
-        }
-        else {
+        } else {
             const angle = (i * 360) / numPoints; // Divide the circle into equal parts
             waypoint = calculateWaypoint(center, radius, angle);
 
@@ -102,9 +112,26 @@ function generateCircularWaypoints(center, radius) {
                 const distanceToHotspot = calculateDistance(waypoint, closestHotspot);
                 if (distanceToHotspot < influenceRadius) {
                     waypoint = adjustWaypointTowardsHotspot(waypoint, closestHotspot, distanceToHotspot, influenceRadius);
+
+                    // Visual indicator: Hotspot-influenced waypoints in green
+                    markerContent.textContent = 'Influenced Waypoint';
+                    markerContent.style.color = 'green';
+                } else {
+                    // Standard waypoint (not influenced)
+                    markerContent.textContent = 'Waypoint';
+                    markerContent.style.color = 'blue';
                 }
             }
         }
+
+        // Create markers for waypoints and track them
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+            position: waypoint,
+            map: map,
+            content: markerContent
+        });
+
+        markers.push(marker); // Track the marker
         waypoints.push(waypoint);
     }
 
@@ -183,4 +210,16 @@ function degreesToRadians(degrees) {
 
 function radiansToDegrees(radians) {
     return radians * (180 / Math.PI);
+}
+
+// Remove all markers from the map
+function removeAllMarkers() {
+    // Remove all manually added markers
+    markers.forEach(marker => {
+        marker.map = null; // Remove the marker from the map
+    });
+    markers = []; // Clear the marker array
+
+    // Clear the route and its waypoint markers (A, B, C, D markers)
+    directionsRenderer.setDirections({ routes: [] });
 }
