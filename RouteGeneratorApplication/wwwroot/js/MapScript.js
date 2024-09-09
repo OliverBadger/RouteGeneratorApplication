@@ -4,6 +4,7 @@ const RADIUS_EARTH = 6371000; // Earth radius in meters
 let hotspots = []; // Array to store hotspot locations
 let markers = []; // Array to store all markers
 let directionsRenderer; // Global variable to store the DirectionsRenderer
+let distanceInfoWindow; // Info window to display total distance on the map
 
 function initMap() {
     // Initialise Google Maps
@@ -34,6 +35,9 @@ function initMap() {
     // Initialise the DirectionsRenderer
     directionsRenderer = new google.maps.DirectionsRenderer();
     directionsRenderer.setMap(map);
+
+    // Initialise the InfoWindow to display the total distance
+    distanceInfoWindow = new google.maps.InfoWindow();
 }
 
 // Add a hotspot when the user clicks on the map
@@ -56,7 +60,8 @@ function addHotspot(location) {
 
 // Generates a circular route and adjusts based on nearby hotspots
 function generateRandomRoute(circumferenceInKm) {
-    const radius = (circumferenceInKm * 1000) / (2 * Math.PI);
+    //const radius = (circumferenceInKm * 1000) / 2; // Calculate radius from diameter
+    const radius = (circumferenceInKm * 1000) / (2 * Math.PI); // Calculate radius from circumference
     const waypoints = generateCircularWaypoints(startLocation, radius);
 
     const directionsService = new google.maps.DirectionsService();
@@ -75,9 +80,76 @@ function generateRandomRoute(circumferenceInKm) {
     directionsService.route(request, function (result, status) {
         if (status === google.maps.DirectionsStatus.OK) {
             directionsRenderer.setDirections(result);
+
+            // Placing custom markers and showing total distance
+            placeCustomMarkers(result); // Place custom markers for origin, destination, and waypoints
+            showTotalDistance(result);  // Show the total distance of the route
         } else {
             console.error('Directions request failed due to ' + status);
         }
+    });
+}
+
+// Display the total distance of the route in the HTML or on the map
+function showTotalDistance(result) {
+    let totalDistance = 0;
+    const legs = result.routes[0].legs;
+
+    // Calculate total distance by summing the distance of each leg
+    legs.forEach(leg => {
+        totalDistance += leg.distance.value; // distance in meters
+    });
+
+    totalDistance = (totalDistance / 1000).toFixed(2); // Convert meters to kilometers and round to 2 decimal places
+
+    // Update the HTML element with the total distance
+    document.getElementById('totalDistance').innerHTML = `Total Distance: ${totalDistance} km`;
+
+    // Optionally, show distance on the map using an info window
+    distanceInfoWindow.setContent(`Total Distance: ${totalDistance} km`);
+    distanceInfoWindow.setPosition(startLocation);
+    distanceInfoWindow.open(map);
+}
+
+// Place custom markers for origin, destination, and waypoints
+function placeCustomMarkers(result) {
+    const route = result.routes[0];
+    const leg = route.legs[0];
+
+    // Create custom marker for the origin
+    const originMarkerContent = document.createElement('div');
+    originMarkerContent.innerHTML = '<div class="custom-marker">A</div>'; // Custom HTML content
+
+    const originMarker = new google.maps.marker.AdvancedMarkerElement({
+        position: leg.start_location,
+        map: map,
+        content: originMarkerContent
+    });
+    markers.push(originMarker); // Track the marker
+
+    // Create custom marker for the destination
+    const destinationMarkerContent = document.createElement('div');
+    destinationMarkerContent.innerHTML = '<div class="custom-marker">B</div>';
+
+    const destinationMarker = new google.maps.marker.AdvancedMarkerElement({
+        position: leg.end_location,
+        map: map,
+        content: destinationMarkerContent
+    });
+    markers.push(destinationMarker); // Track the marker
+
+    // Create custom markers for each waypoint
+    route.waypoint_order.forEach((waypointIndex) => {
+        const waypoint = leg.via_waypoints[waypointIndex];
+        const waypointMarkerContent = document.createElement('div');
+        waypointMarkerContent.innerHTML = `<div class="custom-marker">${String.fromCharCode(67 + waypointIndex)}</div>`; // C, D, E, etc.
+
+        const waypointMarker = new google.maps.marker.AdvancedMarkerElement({
+            position: waypoint,
+            map: map,
+            content: waypointMarkerContent
+        });
+        markers.push(waypointMarker); // Track the marker
     });
 }
 
