@@ -78,21 +78,33 @@ function generateCircularWaypoints(center, radius) {
     const numPoints = 8; // Number of waypoints for the circle
     const influenceRadius = 1000; // Hotspot influence radius (in meters)
 
+    let startingAngle = Math.floor(Math.random() * 360) + 1;
+
+    center = calculateWaypoint(center, radius, startingAngle);
+    if (startingAngle >= 180) { startingAngle -= 180; }
+    else { startingAngle += 180; }
+
     for (let i = 0; i < numPoints; i++) {
-        const angle = (i * 360) / numPoints; // Divide the circle into equal parts
-        let waypoint = calculateWaypoint(center, radius, angle);
+        let waypoint;
+        if (i == 0) {
+            startingAngle;
+            waypoint = calculateWaypoint(center, radius, startingAngle);
+        }
+        else {
+            const angle = (i * 360) / numPoints; // Divide the circle into equal parts
+            waypoint = calculateWaypoint(center, radius, angle);
 
-        // Find the closest hotspot to the current waypoint
-        let closestHotspot = findClosestHotspot(waypoint);
+            // Find the closest hotspot to the current waypoint
+            let closestHotspot = findClosestHotspot(waypoint);
 
-        // Adjust the waypoint if it is within the influence radius of a hotspot
-        if (closestHotspot) {
-            const distanceToHotspot = calculateDistance(waypoint, closestHotspot);
-            if (distanceToHotspot < influenceRadius) {
-                waypoint = adjustWaypointTowardsHotspot(waypoint, closestHotspot, distanceToHotspot, influenceRadius);
+            // Adjust the waypoint if it is within the influence radius of a hotspot
+            if (closestHotspot) {
+                const distanceToHotspot = calculateDistance(waypoint, closestHotspot);
+                if (distanceToHotspot < influenceRadius) {
+                    waypoint = adjustWaypointTowardsHotspot(waypoint, closestHotspot, distanceToHotspot, influenceRadius);
+                }
             }
         }
-
         waypoints.push(waypoint);
     }
 
