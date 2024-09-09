@@ -6,14 +6,14 @@ let markers = []; // Array to store all markers
 let directionsRenderer; // Global variable to store the DirectionsRenderer
 
 function initMap() {
-    // Initialize Google Maps
+    // Initialise Google Maps
     map = new google.maps.Map(document.getElementById('map'), {
         mapId: "dd5c4669aa0f8a85",
         zoom: 14,
         center: startLocation,
     });
 
-    // Initialize a marker for the starting point
+    // Initialise a marker for the starting point
     const markerContent = document.createElement('div');
     markerContent.textContent = 'Start';
     markerContent.style.fontSize = '14px';
@@ -31,7 +31,7 @@ function initMap() {
         addHotspot(e.latLng);
     });
 
-    // Initialize the DirectionsRenderer
+    // Initialise the DirectionsRenderer
     directionsRenderer = new google.maps.DirectionsRenderer();
     directionsRenderer.setMap(map);
 }
