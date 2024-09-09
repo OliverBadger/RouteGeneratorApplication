@@ -16,7 +16,7 @@
 </head>
 <body onload="initMap()">
     <div id="map" style="height: 500px; width: 100%;"></div>
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=@apiKey&callback=initMap"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=@apiKey&callback=initMap&v=weekly&libraries=marker"></script>
 
     <input type="number" id="distanceInput" placeholder="Enter distance in km" />
     <button onclick="generateRandomRoute(parseFloat(document.getElementById('distanceInput').value))">Generate Random Circular Route</button>

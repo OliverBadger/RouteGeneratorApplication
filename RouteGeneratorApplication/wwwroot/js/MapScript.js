@@ -1,123 +1,186 @@
-﻿// Declare a variable to hold the Google Maps object
-let map;
+﻿let map; // Google Maps object
+let startLocation = { lat: 53.428900, lng: -1.324000 }; // Initial map center
+const RADIUS_EARTH = 6371000; // Earth radius in meters
+let hotspots = []; // Array to store hotspot locations
 
-// Set the starting location for the map (San Francisco in this case)
-let startLocation = { lat: 37.7749, lng: -122.4194 }; // Example: San Francisco
-
-// Radius of the Earth in meters, used for calculations
-const RADIUS_EARTH = 6371000; // Radius of Earth in meters
-
-// Function to initialize the map
 function initMap() {
-    // Create a new Google Maps object and set its properties
+    // Initialize Google Maps
     map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 14, // Zoom level (14 is quite zoomed in)
-        center: startLocation, // Center the map on the starting location
+        mapId: "dd5c4669aa0f8a85",
+        zoom: 14,
+        center: startLocation,
     });
 
-    // Create a new marker and add it to the map
-    const marker = new google.maps.Marker({
-        position: startLocation, // Position of the marker
-        map: map, // Map to place the marker on
-        label: 'Start' // Label for the marker
+    // Initialize a marker for the starting point
+    const markerContent = document.createElement('div');
+    markerContent.textContent = 'Start';
+    markerContent.style.fontSize = '14px';
+
+    const marker = new google.maps.marker.AdvancedMarkerElement({
+        position: startLocation,
+        map: map,
+        content: markerContent
+    });
+
+    // Allow users to add hotspots by clicking on the map
+    map.addListener('click', function (e) {
+        addHotspot(e.latLng);
     });
 }
 
-// Function to generate a circular route based on a given distance
-function generateRandomRoute(distanceInKm) {
-    // Generate waypoints in a circular pattern around the start location
-    const waypoints = generateCircularWaypoints(startLocation, distanceInKm);
+// Add a hotspot when the user clicks on the map
+function addHotspot(location) {
+    hotspots.push(location);
 
-    // Create a DirectionsService object to request directions
+    const markerContent = document.createElement('div');
+    markerContent.textContent = 'Hotspot';
+    markerContent.style.fontSize = '14px';
+
+    new google.maps.marker.AdvancedMarkerElement({
+        position: location,
+        map: map,
+        content: markerContent
+    });
+}
+
+// Generates a circular route and adjusts based on nearby hotspots
+function generateRandomRoute(circumferenceInKm) {
+    const radius = (circumferenceInKm * 1000) / (2 * Math.PI);
+    const waypoints = generateCircularWaypoints(startLocation, radius);
+
     const directionsService = new google.maps.DirectionsService();
-
-    // Create a DirectionsRenderer object to display the directions on the map
     const directionsRenderer = new google.maps.DirectionsRenderer();
-
-    // Link the directionsRenderer to the map
     directionsRenderer.setMap(map);
 
-    // Define the request object for the directions
     const request = {
-        origin: startLocation, // Start location
-        destination: startLocation, // End location (same as start to form a loop)
-        waypoints: waypoints.map(waypoint => ({
-            location: waypoint, // Each waypoint location
-            stopover: true // Set stopover to true to include this waypoint in the route
+        origin: waypoints[0],
+        destination: waypoints[0],
+        waypoints: waypoints.slice(1).map(waypoint => ({
+            location: waypoint,
+            stopover: true
         })),
-        optimizeWaypoints: false, // Do not optimize the route
-        travelMode: google.maps.TravelMode.DRIVING // Mode of travel (driving)
+        optimizeWaypoints: false,
+        travelMode: google.maps.TravelMode.WALKING
     };
 
-    // Send the request to the DirectionsService
     directionsService.route(request, function (result, status) {
         if (status === google.maps.DirectionsStatus.OK) {
-            // If the request is successful, set the directions on the map
             directionsRenderer.setDirections(result);
         } else {
-            // If the request fails, log the error
             console.error('Directions request failed due to ' + status);
         }
     });
 }
 
-// Function to generate waypoints for a circular path
-function generateCircularWaypoints(center, distanceInKm) {
-    // Array to hold the generated waypoints
+// Generate circular waypoints adjusted by nearby hotspots
+function generateCircularWaypoints(center, radius) {
     const waypoints = [];
+    const numPoints = 8; // Number of waypoints for the circle
+    const influenceRadius = 1000; // Hotspot influence radius (in meters)
 
-    // Number of points to generate (8 points for an octagon)
-    const numPoints = 8;
+    let startingAngle = Math.floor(Math.random() * 360) + 1;
 
-    // Calculate the radius of the circle in meters
-    const radius = (distanceInKm * 1000) / 2 / Math.PI; // Convert distance to meters and calculate radius
+    center = calculateWaypoint(center, radius, startingAngle);
+    if (startingAngle >= 180) { startingAngle -= 180; }
+    else { startingAngle += 180; }
 
-    // Loop through the number of points and calculate each waypoint
     for (let i = 0; i < numPoints; i++) {
-        // Calculate the angle for each point
-        const angle = (i * 360) / numPoints; // Divide the circle into equal parts
+        let waypoint;
+        if (i == 0) {
+            startingAngle;
+            waypoint = calculateWaypoint(center, radius, startingAngle);
+        }
+        else {
+            const angle = (i * 360) / numPoints; // Divide the circle into equal parts
+            waypoint = calculateWaypoint(center, radius, angle);
 
-        // Calculate the coordinates for the waypoint at the given angle
-        const waypoint = calculateWaypoint(center, radius, angle);
+            // Find the closest hotspot to the current waypoint
+            let closestHotspot = findClosestHotspot(waypoint);
 
-        // Add the calculated waypoint to the array
+            // Adjust the waypoint if it is within the influence radius of a hotspot
+            if (closestHotspot) {
+                const distanceToHotspot = calculateDistance(waypoint, closestHotspot);
+                if (distanceToHotspot < influenceRadius) {
+                    waypoint = adjustWaypointTowardsHotspot(waypoint, closestHotspot, distanceToHotspot, influenceRadius);
+                }
+            }
+        }
         waypoints.push(waypoint);
     }
 
-    // Return the array of waypoints
     return waypoints;
 }
 
-// Function to calculate the latitude and longitude of a waypoint given the center, radius, and angle
+// Find the closest hotspot to a given waypoint
+function findClosestHotspot(waypoint) {
+    if (hotspots.length === 0) return null;
+
+    let closestHotspot = null;
+    let minDistance = Infinity;
+
+    hotspots.forEach(hotspot => {
+        const distance = calculateDistance(waypoint, hotspot);
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestHotspot = hotspot;
+        }
+    });
+
+    return closestHotspot;
+}
+
+// Adjust the waypoint to move it halfway towards the closest hotspot
+function adjustWaypointTowardsHotspot(waypoint, hotspot, distanceToHotspot, influenceRadius) {
+    const factor = 0.5; // Move the waypoint halfway to the hotspot
+    const latDelta = (hotspot.lat() - waypoint.lat) * factor;
+    const lngDelta = (hotspot.lng() - waypoint.lng) * factor;
+
+    return {
+        lat: waypoint.lat + latDelta,
+        lng: waypoint.lng + lngDelta
+    };
+}
+
+// Calculates waypoint coordinates based on center, radius, and angle
 function calculateWaypoint(center, radius, angle) {
-    // Convert latitude and longitude of the center to radians
     const latRadians = degreesToRadians(center.lat);
     const lngRadians = degreesToRadians(center.lng);
-
-    // Convert the angle to radians
     const bearing = degreesToRadians(angle);
 
-    // Calculate the latitude of the waypoint
     const lat = Math.asin(Math.sin(latRadians) * Math.cos(radius / RADIUS_EARTH) +
         Math.cos(latRadians) * Math.sin(radius / RADIUS_EARTH) * Math.cos(bearing));
 
-    // Calculate the longitude of the waypoint
     const lng = lngRadians + Math.atan2(Math.sin(bearing) * Math.sin(radius / RADIUS_EARTH) * Math.cos(latRadians),
         Math.cos(radius / RADIUS_EARTH) - Math.sin(latRadians) * Math.sin(lat));
 
-    // Return the waypoint coordinates in degrees
     return {
         lat: radiansToDegrees(lat),
         lng: radiansToDegrees(lng)
     };
 }
 
-// Function to convert degrees to radians
-function degreesToRadians(degrees) {
-    return degrees * (Math.PI / 180); // Multiply degrees by the factor to convert to radians
+// Calculates the distance between two points in meters
+function calculateDistance(point1, point2) {
+    const lat1 = degreesToRadians(point1.lat);
+    const lng1 = degreesToRadians(point1.lng);
+    const lat2 = degreesToRadians(point2.lat());
+    const lng2 = degreesToRadians(point2.lng());
+
+    const dLat = lat2 - lat1;
+    const dLng = lng2 - lng1;
+
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return RADIUS_EARTH * c; // Distance in meters
 }
 
-// Function to convert radians to degrees
+function degreesToRadians(degrees) {
+    return degrees * (Math.PI / 180);
+}
+
 function radiansToDegrees(radians) {
-    return radians * (180 / Math.PI); // Multiply radians by the factor to convert to degrees
+    return radians * (180 / Math.PI);
 }
